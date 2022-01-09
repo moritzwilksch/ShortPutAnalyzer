@@ -101,13 +101,17 @@ class Underlying:
                     * 365
                 )
 
-    def _get_avg_annualized_return(
+    # ------------------------------- Public Methods -------------------------------
+    def get_avg_annualized_return(
         self, expiration: str = None, delta_range: tuple[float, float] = None
     ) -> float:
         """
         Returns the average annualized return of the underlying.
         Defined as: average annualized return of all put options with delta in `delta_range` (default: [0.1, 0.3])
         """
+        if expiration is None:
+            raise ValueError("Expiration date must be specified")
+
         if delta_range is None:
             delta_range = (0.1, 0.3)
 
@@ -119,7 +123,6 @@ class Underlying:
             ]
         )
 
-    # ------------------------------- Public Methods -------------------------------
     def initialize_greeks_and_profitability(self) -> None:
         self._add_delta_to_put_options()
         self._add_annualized_return_to_put_options()
