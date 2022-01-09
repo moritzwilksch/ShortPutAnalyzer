@@ -21,7 +21,7 @@ class Underlying:
         self._load_expirations()
         self._load_put_options()
 
-    # --------------------- Private Methods ---------------------
+    # ------------------------------- Private Methods -------------------------------
     def _load_expirations(self):
         """ Loads available & considered expirations from YF """
         # maps YYYY-MM-DD expiration dates -> number of days until then
@@ -38,12 +38,12 @@ class Underlying:
         }
 
     def _load_put_options(self):
+        """ Loads put options from YF as dict: expiration_date -> list of options """
         self.put_options: dict = dict()
-        for expiration_date, dte in self.considered_expirations.items():
+        for expiration_date in self.considered_expirations:
             self.put_options[expiration_date] = self._extract_from_yf_option_chain(
                 self.yfticker.option_chain(expiration_date).puts
             )
-            # self.put_options[expiration_date].append({"dte": dte})
 
     def _extract_from_yf_option_chain(self, option_chain: pd.DataFrame):
         """ Extracts data from YF option chain """
@@ -59,7 +59,7 @@ class Underlying:
 
         return results
 
-    # --------------------- Public Methods ---------------------
+    # ------------------------------- Public Methods -------------------------------
     # TBD
 
 
