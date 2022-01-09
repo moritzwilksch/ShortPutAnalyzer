@@ -2,3 +2,4 @@ yfinance
 black
 py_vollib
 rich
+numpy

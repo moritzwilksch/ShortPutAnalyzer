@@ -4,6 +4,7 @@ import pandas as pd
 from py_vollib.black_scholes.greeks.numerical import delta
 from treasury_api import TreasuryAPI
 from rich.console import Console
+import numpy as np
 
 c = Console()
 
@@ -74,9 +75,7 @@ class Underlying:
         api = TreasuryAPI()
         self.riskfree_rate = api.pull_tbill_rate()
 
-    # ------------------------------- Public Methods -------------------------------
-
-    def add_delta_to_put_options(self) -> None:
+    def _add_delta_to_put_options(self) -> None:
         """Adds delta to each put option"""
         for expiration_date, dte in self.considered_expirations.items():
             for option in self.put_options[expiration_date]:
@@ -91,9 +90,46 @@ class Underlying:
                 )
                 option["delta"] = abs(option_delta)
 
+    def _add_annualized_return_to_put_options(self) -> None:
+        """Adds annualized return to each put option"""
+        for expiration_date, dte in self.considered_expirations.items():
+            for option in self.put_options[expiration_date]:
+                option["annualized_return"] = (
+                    (option["lastPrice"] / option["strike"])
+                    * (1 - option["delta"])
+                    / dte
+                    * 365
+                )
+
+    def _get_avg_annualized_return(
+        self, expiration: str = None, delta_range: tuple[float, float] = None
+    ) -> float:
+        """
+        Returns the average annualized return of the underlying.
+        Defined as: average annualized return of all put options with delta in `delta_range` (default: [0.1, 0.3])
+        """
+        if delta_range is None:
+            delta_range = (0.1, 0.3)
+
+        return np.mean(
+            [
+                option["annualized_return"]
+                for option in self.put_options[expiration]
+                if delta_range[0] <= option["delta"] <= delta_range[1]
+            ]
+        )
+
+    # ------------------------------- Public Methods -------------------------------
+    def initialize_greeks_and_profitability(self) -> None:
+        self._add_delta_to_put_options()
+        self._add_annualized_return_to_put_options()
+
 
 if __name__ == "__main__":
     apple = Underlying("AAPL")
-    apple.add_delta_to_put_options()
+    apple.initialize_greeks_and_profitability()
+    sbux = Underlying("SBUX")
+    sbux.initialize_greeks_and_profitability()
+
     c.print(apple.put_options)
     print(apple.available_expirations)
