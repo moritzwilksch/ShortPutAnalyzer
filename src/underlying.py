@@ -1,29 +1,36 @@
 import yfinance as yf
 import datetime
 import pandas as pd
+from py_vollib.black_scholes.greeks.numerical import delta
+from treasury_api import TreasuryAPI
+from rich.console import Console
+
+c = Console()
 
 
 class Underlying:
-    """ Represents an underlying by ticker symbol """
+    """Represents an underlying by ticker symbol"""
 
     def __init__(
         self, ticker: str = None, dte_considered: tuple[int, int] = None
     ) -> None:
-        """ Initialize underlying """
+        """Initialize underlying"""
         if dte_considered is None:
             self.dte_considered = (25, 50)
 
         self.ticker: str = ticker
-        self.today: str = datetime.datetime.today()
+        self.today = datetime.datetime.today()
         self.yfticker: yf.Ticker = yf.Ticker(ticker)
         self.last_close = self.yfticker.history("1d")["Close"].tolist()[0]
 
         self._load_expirations()
         self._load_put_options()
+        self._load_return_std()
+        self._load_riskfree_rate()
 
     # ------------------------------- Private Methods -------------------------------
     def _load_expirations(self):
-        """ Loads available & considered expirations from YF """
+        """Loads available & considered expirations from YF"""
         # maps YYYY-MM-DD expiration dates -> number of days until then
         self.available_expirations: dict[str, int] = {
             expdate: (datetime.datetime.strptime(expdate, "%Y-%m-%d") - self.today).days
@@ -38,7 +45,7 @@ class Underlying:
         }
 
     def _load_put_options(self):
-        """ Loads put options from YF as dict: expiration_date -> list of options """
+        """Loads put options from YF as dict: expiration_date -> list of options"""
         self.put_options: dict = dict()
         for expiration_date in self.considered_expirations:
             self.put_options[expiration_date] = self._extract_from_yf_option_chain(
@@ -46,7 +53,7 @@ class Underlying:
             )
 
     def _extract_from_yf_option_chain(self, option_chain: pd.DataFrame):
-        """ Extracts data from YF option chain """
+        """Extracts data from YF option chain"""
         results = []
         for record in option_chain.to_records():
             results.append(
@@ -59,10 +66,34 @@ class Underlying:
 
         return results
 
+    def _load_return_std(self):
+        """Loads the return standard deviation of the underlying"""
+        self.return_std = self.yfticker.history(period="2y")["Close"].pct_change().std()
+
+    def _load_riskfree_rate(self):
+        api = TreasuryAPI()
+        self.riskfree_rate = api.pull_tbill_rate()
+
     # ------------------------------- Public Methods -------------------------------
-    # TBD
+
+    def add_delta_to_put_options(self) -> None:
+        """Adds delta to each put option"""
+        for expiration_date, dte in self.considered_expirations.items():
+            for option in self.put_options[expiration_date]:
+
+                option_delta = delta(
+                    flag="p",
+                    S=self.last_close,
+                    K=option["strike"],
+                    t=dte / 365,
+                    r=self.riskfree_rate,
+                    sigma=self.return_std * (365) ** 0.5,
+                )
+                option["delta"] = abs(option_delta)
 
 
 if __name__ == "__main__":
     apple = Underlying("AAPL")
+    apple.add_delta_to_put_options()
+    c.print(apple.put_options)
     print(apple.available_expirations)
