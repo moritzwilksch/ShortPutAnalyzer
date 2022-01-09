@@ -3,3 +3,5 @@ black
 py_vollib
 rich
 numpy
+joblib
+pymongo

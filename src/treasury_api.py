@@ -6,7 +6,7 @@ import datetime
 class TreasuryAPI:
     def __init__(self) -> None:
         self.URL = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
-        self.endpoint = "/v2/accounting/od/avg_interest_rates"
+        self.ENDPOINT = "/v2/accounting/od/avg_interest_rates"
 
         self.today_datetime = datetime.datetime.today()
         self.params = {
@@ -15,7 +15,7 @@ class TreasuryAPI:
 
     def pull_tbill_rate(self) -> float:
         """Pulls the current tbill rate from the treasury api"""
-        r = requests.get(f"{self.URL}{self.endpoint}", params=self.params)
+        r = requests.get(f"{self.URL}{self.ENDPOINT}", params=self.params)
         jsondata = r.json()["data"]
         jsondata.sort(key=lambda x: x["record_date"])
         most_current_record = jsondata[-1]

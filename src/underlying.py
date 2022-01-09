@@ -5,6 +5,8 @@ from py_vollib.black_scholes.greeks.numerical import delta
 from treasury_api import TreasuryAPI
 from rich.console import Console
 import numpy as np
+from pymongo import MongoClient
+import os
 
 c = Console()
 
@@ -127,12 +129,41 @@ class Underlying:
         self._add_delta_to_put_options()
         self._add_annualized_return_to_put_options()
 
+    def get_expiration_closest_to(self, dte:int) -> str:
+        """ Returns expiration date closest to dte """
+        return min({k: abs(v - dte) for k, v in self.available_expirations.items()}.items(), key=lambda x: x[1])[0]
+
+    def persist_to_db(self) -> None:
+        user = os.getenv("MONGO_INITDB_ROOT_USERNAME")
+        passwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
+        dbname = os.getenv("MONGO_INITDB_DATABASE")
+
+        # client = MongoClient(f"mongodb://{user}:{passwd}@localhost:27017/{dbname}?authSource=admin")
+        # client = MongoClient(host="localhost", port=27017, username=user, password=passwd, authSource="admin")
+        client = MongoClient(f"mongodb://{user}:{passwd}@localhost:27017/{dbname}", authSource="admin")
+        db = client.get_database(dbname)
+        coll = db.get_collection("underlyings")
+
+        for x in coll.find():
+            print(x)
+
+        print("works")
+
+        datalist = []
+        for expiration, data in self.put_options.items():
+            for elem in data:
+                elem["inTheMoney"] = bool(elem["inTheMoney"])
+            datalist.append({expiration: data})
+
+        coll.insert_many(datalist)
+
+        client.close()
+
+
 
 if __name__ == "__main__":
     apple = Underlying("AAPL")
     apple.initialize_greeks_and_profitability()
-    sbux = Underlying("SBUX")
-    sbux.initialize_greeks_and_profitability()
-
+    apple.persist_to_db()
     c.print(apple.put_options)
     print(apple.available_expirations)
