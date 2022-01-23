@@ -138,8 +138,6 @@ class Underlying:
         passwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
         dbname = os.getenv("MONGO_INITDB_DATABASE")
 
-        # client = MongoClient(f"mongodb://{user}:{passwd}@localhost:27017/{dbname}?authSource=admin")
-        # client = MongoClient(host="localhost", port=27017, username=user, password=passwd, authSource="admin")
         client = MongoClient(f"mongodb://{user}:{passwd}@localhost:27017/{dbname}", authSource="admin")
         db = client.get_database(dbname)
         coll = db.get_collection("underlyings")
@@ -164,6 +162,6 @@ class Underlying:
 if __name__ == "__main__":
     apple = Underlying("AAPL")
     apple.initialize_greeks_and_profitability()
-    apple.persist_to_db()
+    # apple.persist_to_db()
     c.print(apple.put_options)
     print(apple.available_expirations)

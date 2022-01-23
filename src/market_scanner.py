@@ -28,7 +28,7 @@ def get_initialized_underlying(ticker: str) -> Underlying:
     return underlying
 
 
-with Status("Lodaing underlyings...", spinner="bouncingBar", console=c) as status:
+with Status("Loading underlyings...", spinner="bouncingBar", console=c) as status:
     underlyings: list[Underlying] = Parallel(n_jobs=2, prefer="threads")(
         delayed(get_initialized_underlying)(ticker) for ticker in watchlist
     )
