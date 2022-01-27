@@ -14,3 +14,6 @@ db-up:
 db-down:
 	docker stop shortput-db
 	docker rm shortput-db
+
+fetch-watchlist:
+	xvfb-run python fetch_watchlist_tickers.py

@@ -32,6 +32,46 @@ class Underlying:
         self._load_riskfree_rate()
 
     # ------------------------------- Private Methods -------------------------------
+    def _add_annualized_return_to_put_options(self) -> None:
+        """Adds annualized return to each put option"""
+        for expiration_date, dte in self.considered_expirations.items():
+            for option in self.put_options[expiration_date]:
+                option["annualized_return"] = (
+                    (option["lastPrice"] / option["strike"])
+                    * (1 - option["delta"])
+                    / dte
+                    * 365
+                )
+
+    def _add_delta_to_put_options(self) -> None:
+        """Adds delta to each put option"""
+        for expiration_date, dte in self.considered_expirations.items():
+            for option in self.put_options[expiration_date]:
+
+                option_delta = delta(
+                    flag="p",
+                    S=self.last_close,
+                    K=option["strike"],
+                    t=dte / 365,
+                    r=self.riskfree_rate,
+                    sigma=self.return_std * (365) ** 0.5,
+                )
+                option["delta"] = abs(option_delta)
+
+    def _extract_from_yf_option_chain(self, option_chain: pd.DataFrame):
+        """Extracts data from YF option chain"""
+        results = []
+        for record in option_chain.to_records():
+            results.append(
+                {
+                    "strike": record["strike"],
+                    "lastPrice": record["lastPrice"],
+                    "inTheMoney": record["inTheMoney"],
+                }
+            )
+
+        return results
+
     def _load_expirations(self):
         """Loads available & considered expirations from YF"""
         # maps YYYY-MM-DD expiration dates -> number of days until then
@@ -55,20 +95,6 @@ class Underlying:
                 self.yfticker.option_chain(expiration_date).puts
             )
 
-    def _extract_from_yf_option_chain(self, option_chain: pd.DataFrame):
-        """Extracts data from YF option chain"""
-        results = []
-        for record in option_chain.to_records():
-            results.append(
-                {
-                    "strike": record["strike"],
-                    "lastPrice": record["lastPrice"],
-                    "inTheMoney": record["inTheMoney"],
-                }
-            )
-
-        return results
-
     def _load_return_std(self):
         """Loads the return standard deviation of the underlying"""
         self.return_std = self.yfticker.history(period="2y")["Close"].pct_change().std()
@@ -76,32 +102,6 @@ class Underlying:
     def _load_riskfree_rate(self):
         api = TreasuryAPI()
         self.riskfree_rate = api.pull_tbill_rate()
-
-    def _add_delta_to_put_options(self) -> None:
-        """Adds delta to each put option"""
-        for expiration_date, dte in self.considered_expirations.items():
-            for option in self.put_options[expiration_date]:
-
-                option_delta = delta(
-                    flag="p",
-                    S=self.last_close,
-                    K=option["strike"],
-                    t=dte / 365,
-                    r=self.riskfree_rate,
-                    sigma=self.return_std * (365) ** 0.5,
-                )
-                option["delta"] = abs(option_delta)
-
-    def _add_annualized_return_to_put_options(self) -> None:
-        """Adds annualized return to each put option"""
-        for expiration_date, dte in self.considered_expirations.items():
-            for option in self.put_options[expiration_date]:
-                option["annualized_return"] = (
-                    (option["lastPrice"] / option["strike"])
-                    * (1 - option["delta"])
-                    / dte
-                    * 365
-                )
 
     # ------------------------------- Public Methods -------------------------------
     def get_avg_annualized_return(
@@ -125,20 +125,25 @@ class Underlying:
             ]
         )
 
+    def get_expiration_closest_to(self, dte: int) -> str:
+        """ Returns expiration date closest to dte """
+        return min(
+            {k: abs(v - dte) for k, v in self.available_expirations.items()}.items(),
+            key=lambda x: x[1],
+        )[0]
+
     def initialize_greeks_and_profitability(self) -> None:
         self._add_delta_to_put_options()
         self._add_annualized_return_to_put_options()
-
-    def get_expiration_closest_to(self, dte:int) -> str:
-        """ Returns expiration date closest to dte """
-        return min({k: abs(v - dte) for k, v in self.available_expirations.items()}.items(), key=lambda x: x[1])[0]
 
     def persist_to_db(self) -> None:
         user = os.getenv("MONGO_INITDB_ROOT_USERNAME")
         passwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
         dbname = os.getenv("MONGO_INITDB_DATABASE")
 
-        client = MongoClient(f"mongodb://{user}:{passwd}@localhost:27017/{dbname}", authSource="admin")
+        client = MongoClient(
+            f"mongodb://{user}:{passwd}@localhost:27017/{dbname}", authSource="admin"
+        )
         db = client.get_database(dbname)
         coll = db.get_collection("underlyings")
 
@@ -156,7 +161,6 @@ class Underlying:
         coll.insert_many(datalist)
 
         client.close()
-
 
 
 if __name__ == "__main__":
