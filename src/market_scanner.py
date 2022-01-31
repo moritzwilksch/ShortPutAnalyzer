@@ -21,13 +21,17 @@ watchlist = [
     "SBUX",
 ]
 
-with open("filtered_watchlist.txt", "r") as f:
+with open("manual_filtered_watchlist.txt", "r") as f:
     watchlist = [ticker.strip() for ticker in f.readlines()]
 
 
 def get_initialized_underlying(ticker: str) -> Underlying:
-    underlying = Underlying(ticker)
-    underlying.initialize_greeks_and_profitability()
+    try:
+        underlying = Underlying(ticker)
+        underlying.initialize_greeks_and_profitability()
+    except:
+        c.print(f"[yellow][WARN][/] Error initializing {ticker}")
+        return None
     c.print(f"[green][INFO][/] Got {underlying.ticker}")
     return underlying
 
@@ -45,6 +49,9 @@ table.add_column("Annualized Return", justify="center")
 
 results = []
 for underlying in underlyings:
+    if underlying is None:
+        continue
+
     best_expiration = underlying.get_expiration_closest_to(40)
     try:
         profitability = underlying.get_avg_annualized_return(best_expiration)
@@ -52,13 +59,15 @@ for underlying in underlyings:
         c.print(f"[yellow][WARN][/] {underlying.ticker} has no options")
         continue
 
-    results.append(
-        {
-            "ticker": underlying.ticker,
-            "expiration": best_expiration,
-            "return": profitability,
-        }
-    )
+    if profitability > 0:
+        results.append(
+            {
+                "ticker": underlying.ticker,
+                "expiration": best_expiration,
+                "return": profitability,
+            }
+        )
+
 
 results.sort(key=lambda x: x["return"], reverse=True)
 for result in results:
