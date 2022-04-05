@@ -9,6 +9,9 @@ c = Console()
 
 watchlist = [
     "OHI",
+    "BTI",
+    "DELL",
+    "WBA",
     "MPW",
     "IRM",
     "ABBV",
@@ -18,11 +21,12 @@ watchlist = [
     "T",
     "PLTR",
     "SPHD",
+    "SPYD",
     "SBUX",
 ]
 
-with open("manual_filtered_watchlist.txt", "r") as f:
-    watchlist = [ticker.strip() for ticker in f.readlines()]
+# with open("manual_filtered_watchlist.txt", "r") as f:
+#     watchlist = [ticker.strip() for ticker in f.readlines()]
 
 
 def get_initialized_underlying(ticker: str) -> Underlying:
