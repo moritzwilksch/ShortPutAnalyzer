@@ -17,3 +17,6 @@ db-down:
 
 fetch-watchlist:
 	xvfb-run python fetch_watchlist_tickers.py
+
+docker/build:
+	docker build -t finviz-scrape .

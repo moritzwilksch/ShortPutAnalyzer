@@ -6,3 +6,4 @@ numpy
 joblib
 pymongo
 prefect
+beautifulsoup4
