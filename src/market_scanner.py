@@ -23,6 +23,7 @@ watchlist = [
     "SPHD",
     "SPYD",
     "SBUX",
+    "SCHD",
 ]
 
 # with open("manual_filtered_watchlist.txt", "r") as f:
