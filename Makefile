@@ -20,3 +20,7 @@ fetch-watchlist:
 
 docker/build:
 	docker build -t finviz-scrape .
+
+docker/run:
+	docker container rm finviz-scrape
+	docker run -it --name finviz-scrape finviz-scrape

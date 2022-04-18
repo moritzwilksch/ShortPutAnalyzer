@@ -23,7 +23,7 @@ COLNAMES = [
 BASE_URL = "https://finviz.com/screener.ashx?v=111&f=cap_largeover,fa_div_o1,fa_opermargin_pos,fa_payoutratio_u100,fa_pe_u40,fa_pfcf_u30,sh_opt_option"
 
 
-def get_items_from_page_html(html: str) -> list[dict]:
+def get_items_from_page_html(html: str):
     soup = BeautifulSoup(html, "lxml")
     rows = soup.find_all("tr", {"class": "table-light-row-cp"}) + soup.find_all(
         "tr", {"class": "table-dark-row-cp"}
